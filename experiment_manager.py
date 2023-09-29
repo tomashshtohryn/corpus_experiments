@@ -187,56 +187,6 @@ class Corpus_BurrowsDistance(DistanceCalculator):
         plt.title(f'Burrows Delta. mfw: {self.mfw}, distance: {self.distance}')
         plt.show()
 
-# Example of other Distance calculator, based on TF-IDF values:
-# class Corpus_TFIDF_Distance(DistanceCalculator):
-#     def __init__(self, mfw:int, distance:str, corpus:dict):
-#         self.mfw = mfw
-#         self.distance = distance
-#         self.corpus = corpus
-#         self.most_frequent_terms = self.most_frequent_words()
-#         self.vectorized_data = self.vectorize()
-#         self.dist_matrix = self.distance_matrix()
-#
-#     def most_frequent_words(self):
-#         term_frequencies = Counter(list(chain.from_iterable(self.corpus.values())))
-#         mft = term_frequencies.most_common(self.mfw)
-#         df_mft = pd.DataFrame(mft, columns=['Term', 'Frequency'])
-#         return df_mft
-#
-#     def vectorize(self):
-#         documents_tfidf = pd.DataFrame(columns=['Title'] + self.most_frequent_terms['Term'].tolist())
-#         n = len(self.corpus)
-#         for key, value in self.corpus.items():
-#             row = [key]
-#             for term in self.most_frequent_terms['Term'].tolist():
-#                 rel_tf = value.count(term) / len(value)
-#                 df = sum(1 for doc in self.corpus.values() if term in doc)
-#                 idf = math.log(n/(df+1))
-#                 tf_idf = rel_tf*idf
-#                 row.append(tf_idf)
-#             documents_tfidf.loc[len(documents_tfidf)] = row
-#         return documents_tfidf
-#
-#     def distance_matrix(self):
-#         document_titles = self.vectorized_data['Title'].tolist()
-#         tf_idf_values = self.vectorized_data.drop(columns=['Title']).values
-#         if self.distance == 'manhattan':
-#             distance_matrix = manhattan_distances(tf_idf_values)
-#         if self.distance == 'euclidean':
-#             distance_matrix = euclidean_distances(tf_idf_values)
-#         if self.distance == 'cosine':
-#             distance_matrix = cosine_distances(tf_idf_values)
-#         df_distance_matrix = pd.DataFrame(distance_matrix, index=document_titles, columns=document_titles)
-#
-#         return df_distance_matrix
-#
-#     def plot_dendrogram(self):
-#         g = sns.clustermap(self.dist_matrix, cmap='mako',
-#                            method='single', row_cluster=True,
-#                            col_cluster=False, figsize=(8, 6))
-#         # Show the plot
-#         plt.title(f'TF-IDF. mfw: {self.mfw}, distance: {self.distance}')
-#         plt.show()
 class Experiment:
     """
     Experiment class to manage a single experiment.
