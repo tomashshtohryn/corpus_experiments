@@ -1,0 +1,30 @@
+{
+    "Text 1": {
+        "title": "Biodiversit\u00e4t",
+        "file": "Biodiversit\u00e4t.txt"
+    },
+    "Text 2": {
+        "title": "Globale Wirtschaft",
+        "file": "Globale Wirtschaft.txt"
+    },
+    "Text 3": {
+        "title": "Konsum",
+        "file": "Konsum.txt"
+    },
+    "Text 4": {
+        "title": "Nachhaltigkeit",
+        "file": "Nachhaltigkeit.txt"
+    },
+    "Text 5": {
+        "title": "Naturschutz",
+        "file": "Naturschutz.txt"
+    },
+    "Text 6": {
+        "title": "Umweltschutz",
+        "file": "Umweltschutz.txt"
+    },
+    "Text 7": {
+        "title": "Wirtschaft",
+        "file": "Wirtschaft.txt"
+    }
+}

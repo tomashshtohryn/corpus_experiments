@@ -1,0 +1,11 @@
+{
+    "Experiment": "experiment1",
+    "Corpus": "example_gpt_generated_corpus",
+    "Tokenizer": "regexp",
+    "Lowercase": true,
+    "Stop words": true,
+    "MFW": "10, 40",
+    "Distance Methods": "cosine, euclidean, manhattan",
+    "Predefined Clusters": 3,
+    "Time": "29.09.2023, 23:32:24"
+}
