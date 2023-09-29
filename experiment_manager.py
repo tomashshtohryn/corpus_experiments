@@ -28,6 +28,7 @@ class Corpus:
         self.name = name
         self.corpus = corpus_path
 
+    # Load corpus
     def load(self) -> dict:
         files = [filename for filename in os.listdir(self.corpus) if filename.endswith('.txt')]
         documents = {}
@@ -38,6 +39,7 @@ class Corpus:
                     documents[title] = f.read()
         return documents
 
+    # Get and save corpus metadata
     def get_metadata(self, save_json=None):
         metadata = {}
         for index, file in enumerate(os.listdir(self.corpus)):
@@ -66,6 +68,7 @@ class Corpus_WordTokenizer(Tokenizer):
         self.lowercase = lowercased
         self.remove_stopwords = stop_words
 
+    # Tokenize each text in corpus
     def tokenize_corpus(self, corpus:dict) -> dict:
         tokenized_corpus = {}
         for title, text in corpus.items():
@@ -87,6 +90,7 @@ class Corpus_RegexpTokenizer(Tokenizer):
         self.remove_stopwords = stop_words
         self.corpus_tokenizer = RegexpTokenizer(r'\w+|\$[\d\.]+|\S+')
 
+    # Tokenize each text in corpus
     def tokenize_corpus(self, corpus:dict) -> dict:
         tokenized_corpus = {}
         for title, text in corpus.items():
@@ -101,7 +105,7 @@ class Corpus_RegexpTokenizer(Tokenizer):
 
 class DistanceCalculator(ABC):
     """
-    Abstract base class, which allows the creation of many distance metrics
+    Abstract base class, which allows the creation of many distance metrics/classes
     Input: tokenized_corpus:dict
     Output: distance matrix as pandas Dataframe
     """
@@ -120,6 +124,70 @@ class DistanceCalculator(ABC):
     def plot_dendrogram(self):
         pass
 
+class Corpus_BurrowsDistance(DistanceCalculator):
+    """
+    This class allows calculating of burrows deltas across entire corpus
+    """
+    def __init__(self, mfw:int, corpus:dict, distance:str):
+        self.mfw = mfw
+        self.corpus = corpus
+        self.most_frequent_terms = self.most_frequent_words()
+        self.vectorized_data = self.vectorize()
+        self.distance = distance
+        self.dist_matrix = self.distance_matrix()
+
+    # Get n most freuqent words
+    def most_frequent_words(self):
+        term_frequencies = Counter(list(chain.from_iterable(self.corpus.values())))
+        if self.mfw > len(term_frequencies):
+            raise IndexError(f'The mfw of {self.mfw} is bigger than the length of each text in corpus')
+        mft = term_frequencies.most_common(self.mfw)
+        df_mft = pd.DataFrame(mft, columns=['Term', 'Frequency'])
+        return df_mft
+
+    # Vectorize texts, values are z-scores
+    def vectorize(self):
+        documents_zscores = pd.DataFrame(columns=['Title'] + list(self.most_frequent_terms['Term']))
+        n = len(self.corpus)
+        for key, value in self.corpus.items():
+            row = [key]
+            for term in self.most_frequent_terms['Term'].tolist():
+                if term in value:
+                    rel_tf = value.count(term) / len(value)
+                else:
+                    rel_tf = 0
+                rel_tf_corpus = [(doc.count(term) / len(doc)) for doc in self.corpus.values()]
+                mean = sum(rel_tf_corpus) / n
+                std = statistics.stdev(rel_tf_corpus)
+                z_score = (rel_tf - mean) / std
+                row.append(z_score)
+            documents_zscores.loc[len(documents_zscores)] = row
+        return documents_zscores
+
+    # Calculate distances based on term-document matrix
+    def distance_matrix(self):
+        document_titles = self.vectorized_data['Title'].tolist()
+        z_values = self.vectorized_data.drop(columns=['Title']).values
+        if self.distance == 'manhattan':
+            distance_matrix = manhattan_distances(z_values)
+        if self.distance == 'euclidean':
+            distance_matrix = euclidean_distances(z_values)
+        if self.distance == 'cosine':
+            distance_matrix = cosine_distances(z_values)
+        df_distance_matrix = pd.DataFrame(distance_matrix, index=document_titles, columns=document_titles)
+
+        return df_distance_matrix
+
+    # Plot clustering results
+    def plot_dendrogram(self):
+        g = sns.clustermap(self.dist_matrix, cmap='mako',
+                           method='single', row_cluster=True,
+                           col_cluster=False, figsize=(8,6))
+        # Show the plot
+        plt.title(f'Burrows Delta. mfw: {self.mfw}, distance: {self.distance}')
+        plt.show()
+
+# Example of other Distance calculator, based on TF-IDF values:
 # class Corpus_TFIDF_Distance(DistanceCalculator):
 #     def __init__(self, mfw:int, distance:str, corpus:dict):
 #         self.mfw = mfw
@@ -169,65 +237,12 @@ class DistanceCalculator(ABC):
 #         # Show the plot
 #         plt.title(f'TF-IDF. mfw: {self.mfw}, distance: {self.distance}')
 #         plt.show()
-
-class Corpus_BurrowsDistance(DistanceCalculator):
-    def __init__(self, mfw:int, corpus:dict, distance:str):
-        self.mfw = mfw
-        self.corpus = corpus
-        self.most_frequent_terms = self.most_frequent_words()
-        self.vectorized_data = self.vectorize()
-        self.distance = distance
-        self.dist_matrix = self.distance_matrix()
-
-    def most_frequent_words(self):
-        term_frequencies = Counter(list(chain.from_iterable(self.corpus.values())))
-        if self.mfw > len(term_frequencies):
-            raise IndexError(f'The mfw of {self.mfw} is bigger than the length of each text in corpus')
-        mft = term_frequencies.most_common(self.mfw)
-        df_mft = pd.DataFrame(mft, columns=['Term', 'Frequency'])
-        return df_mft
-
-    def vectorize(self):
-        documents_zscores = pd.DataFrame(columns=['Title'] + list(self.most_frequent_terms['Term']))
-        n = len(self.corpus)
-        for key, value in self.corpus.items():
-            row = [key]
-            for term in self.most_frequent_terms['Term'].tolist():
-                if term in value:
-                    rel_tf = value.count(term) / len(value)
-                else:
-                    rel_tf = 0
-                rel_tf_corpus = [(doc.count(term) / len(doc)) for doc in self.corpus.values()]
-                mean = sum(rel_tf_corpus) / n
-                std = statistics.stdev(rel_tf_corpus)
-                z_score = (rel_tf - mean) / std
-                row.append(z_score)
-            documents_zscores.loc[len(documents_zscores)] = row
-        return documents_zscores
-
-    def distance_matrix(self):
-        document_titles = self.vectorized_data['Title'].tolist()
-        z_values = self.vectorized_data.drop(columns=['Title']).values
-        if self.distance == 'manhattan':
-            distance_matrix = manhattan_distances(z_values)
-        if self.distance == 'euclidean':
-            distance_matrix = euclidean_distances(z_values)
-        if self.distance == 'cosine':
-            distance_matrix = cosine_distances(z_values)
-        df_distance_matrix = pd.DataFrame(distance_matrix, index=document_titles, columns=document_titles)
-
-        return df_distance_matrix
-
-    def plot_dendrogram(self):
-        g = sns.clustermap(self.dist_matrix, cmap='mako',
-                           method='single', row_cluster=True,
-                           col_cluster=False, figsize=(8,6))
-        # Show the plot
-        plt.title(f'Burrows Delta. mfw: {self.mfw}, distance: {self.distance}')
-        plt.show()
-
-
 class Experiment:
+    """
+    Experiment class to manage a single experiment.
+    Input: distance matrix as pandas Dataframe
+    Output: vizualisation of experiment progress, metadata as json file, results as pandas Dataframe
+    """
     def __init__(self, experiment_name, corpus_name:str, corpus_path:str, tokenizer:str,
                  stop_words:bool, lowercased:bool,
                  distance_methods:list, mfw_range:list,
@@ -242,6 +257,7 @@ class Experiment:
         self.distance_methods = distance_methods
         self.n_cluster = n_cluster
 
+    # Run experiment with predefined hyperparameters
     def run(self):
         data = self.corpus.load()
         save_corpus_metadata = self.corpus.get_metadata(save_json=True)
@@ -279,6 +295,7 @@ class Experiment:
         plt.show()
         return result_df
 
+    # Show and save metadata
     def save_metadata(self):
         # Create a datastructure
         experiment_metadata = {'Experiment': self.experiment_name,
